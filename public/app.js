@@ -50,7 +50,7 @@ const empty = t => `<div class="empty">${t}</div>`;
 /* ---------- auth ---------- */
 function authView() {
   const reg = V.mode === 'register';
-  return `<div class="app"><main class="pad"><div class="stack"><div class="logo dark">Just<span>Trim</span></div><h1 class="hero">Know before you go.</h1>
+  return `<div class="app"><main class="pad"><div class="stack"><img class="hero-logo" src="/logo.png" alt="Just Trim. Style Made Easy"><h1 class="hero" style="max-width:none;font-size:28px">Know before you go.</h1>
   <p class="muted">See how busy a salon is, pick your stylist and book a slot. Salon owners manage the whole day from their phone.</p>
   <form class="card stack" data-submit="${reg ? 'register' : 'login'}">
   ${reg ? '<label>Your name<input class="in" name="name" required autocomplete="name"></label>' : ''}
@@ -74,7 +74,7 @@ function shell() {
   else if (V.tab === 'mine') body = mineView();
   else if (V.tab === 'salon') body = salonView();
   else body = adminView();
-  return `<div class="app"><header class="top"><div class="row"><div class="logo">Just<span>Trim</span></div><div class="sp"></div><span class="small" style="opacity:.8">${esc(A.user.name)}</span><button class="clock" data-a="logout">Log out</button></div>
+  return `<div class="app"><header class="top"><div class="row"><div class="logo"><img src="/pin.png" alt="">Just<span>Trim</span></div><div class="sp"></div><span class="small" style="opacity:.8">${esc(A.user.name)}</span><button class="clock" data-a="logout">Log out</button></div>
   <div class="seg">${tabsFor().map(([k, l]) => `<button class="${V.tab === k ? 'on' : ''}" data-a="tab" data-v="${k}">${l}</button>`).join('')}</div></header><main class="pad">${body}</main>${dock}</div>`;
 }
 function render() {
@@ -112,7 +112,7 @@ function shopView() {
   return `<div class="stack"><button class="link" data-a="backList">‹ Back</button><div><h2>${esc(s.name)}</h2><div class="muted small">${esc(s.address || s.area)} · ${fmtT(s.openMin)}–${fmtT(s.closeMin)}${s.offDays.length ? ' · Off: ' + s.offDays.map(d => DAYS[d]).join(', ') : ''}</div></div>
   <div class="card">${crowdHtml(s.crowd)}${s.crowd.closed ? '' : '<button class="btn alt block" style="margin-top:10px" data-a="joinQueue">Join walk-in queue</button>'}${s.offer ? `<div class="offer">${s.offer.pct}% off with ${esc(s.offer.code)}</div>` : ''}</div>
   <h3>Services</h3><div>${D.services.map(v => `<button class="pick ${on('svc', v.id) ? 'on' : ''}" data-a="togItem" data-t="svc" data-id="${v.id}"><span class="ck">${on('svc', v.id) ? '✓' : ''}</span><span class="sp"><b>${esc(v.name)}</b><div class="muted small">${v.durMin} min (varies by stylist)</div></span><b>${inr(v.price)}</b></button>`).join('')}</div>
-  ${D.combos.length ? `<h3>Combos</h3><div>${D.combos.map(v => `<button class="pick ${on('combo', v.id) ? 'on' : ''}" data-a="togItem" data-t="combo" data-id="${v.id}"><span class="ck">${on('combo', v.id) ? '✓' : ''}</span><span class="sp"><b>${esc(v.name)}</b><div class="muted small">${v.serviceIds.map(id => svcOf(id) ? esc(svcOf(id).name) : '').join(' + ')} · ${v.durMin} min</div></span><b>${inr(v.price)}</b></button>`).join('')}</div>` : ''}
+  ${D.combos.length ? `<h3>Combos</h3><div>${D.combos.map(v => `<button class="pick ${on('combo', v.id) ? 'on' : ''}" data-a="togItem" data-t="combo" data-id="${v.id}"><span class="ck">${on('combo', v.id) ? '✓' : ''}</span><span class="sp"><b>${esc(v.name)}</b><div class="muted small">${v.serviceIds.map(id => svcOf(id) ? esc(svcOf(id).name) : '').join(' + ')} · ${v.durMin} min${(sv => sv > v.price ? ' · save ' + inr(sv - v.price) : '')(v.serviceIds.reduce((a, id) => a + (svcOf(id) ? svcOf(id).price : 0), 0))}</div></span><b>${inr(v.price)}</b></button>`).join('')}</div>` : ''}
   <h3>Stylists</h3><div><div class="card st ${V.staffId === 'any' ? 'sel' : ''}" data-a="pickStaff" data-id="any"><div class="av" style="background:var(--brand);color:var(--brand-ink)" aria-hidden="true">★</div><div class="sp"><b>Any available</b><div class="muted small">We assign the first free stylist</div></div></div>${D.staff.map(stRow).join('')}</div></div>`;
 }
 function shopDock() {
@@ -141,7 +141,7 @@ const bookDock = () => `<div class="dock"><div class="sp muted small">${V.slot ?
 function ticketView() {
   const b = V.ticket, st = V.shop.staff.find(x => x.id === b.staffId);
   return `<div class="stack"><h2>${b.type === 'walkin' ? "You're in the queue" : 'Booking confirmed'}</h2>
-  <div class="ticket"><div class="tk-top"><div><div class="muted small">Token</div><div class="tk-no">#${b.token}</div></div><div style="text-align:right"><b>${dayLabel(b.date)}</b><div style="font:800 24px 'Bricolage Grotesque',sans-serif">${fmtT(b.startMin)}</div><div class="muted small">${b.durMin} min</div></div></div><div class="tk-cut"></div>
+  <div class="ticket"><div class="tk-top"><div><div class="muted small">Token</div><div class="tk-no">#${b.token}</div></div><div style="text-align:right"><b>${dayLabel(b.date)}</b><div style="font:800 24px 'Outfit',sans-serif">${fmtT(b.startMin)}</div><div class="muted small">${b.durMin} min</div></div></div><div class="tk-cut"></div>
   <div class="tk-bot"><b>${esc(V.shop.salon.name)}</b><div class="muted small">${esc(V.shop.salon.address || V.shop.salon.area)}</div><div style="margin-top:8px">${b.items.map(i => esc(i.name)).join(' + ')}${st ? ' with <b>' + esc(st.name) + '</b>' : ''}</div><div class="muted small">${b.advance ? 'Advance ' + inr(b.advance) + ' · ' : ''}Pay ${inr(Math.max(0, b.price - b.advance))} at the salon</div></div></div>
   <div class="note ok">The salon has been notified on their phone.</div><button class="btn block" data-a="tab" data-v="mine">View my bookings</button><button class="btn alt block" data-a="backList">Back to salons</button></div>`;
 }
@@ -167,15 +167,19 @@ function salonForm(branch) {
   return `<form class="card stack" data-submit="regSave"><b>${branch ? 'Add a branch' : 'Register your salon'}</b><label>${branch ? 'Branch name' : 'Salon name'}<input class="in" name="name" required></label>
   <div class="cols2"><label>Area<input class="in" name="area" required></label><label>Type<select class="in" name="type"><option>Men</option><option>Women</option><option>Unisex</option></select></label></div>
   <label>Address<input class="in" name="address" required></label><div class="cols2"><label>Opens<select class="in" name="openMin">${timeOpts(540)}</select></label><label>Closes<select class="in" name="closeMin">${timeOpts(1260)}</select></label></div>
-  <label>People working<input class="in" type="number" name="staffCount" min="1" value="2"></label><div class="note">Super Admin checks every salon before customers can see it. The first 3 months are free.</div><button class="btn block">Submit for approval</button></form>`;
+  <label>People working<input class="in" type="number" name="staffCount" min="1" value="2"></label><div class="note">Next you add your team, menu prices and payment details, then submit for approval. The first 3 months are free after approval.</div><button class="btn block">Create salon</button></form>`;
+}
+function setupCard() {
+  const s = curSalon(), M = V.manage, ok = [['Address added', !!M.salon.address], ['At least 1 stylist', M.staff.length > 0], ['Menu has services', M.services.length > 0], ['Payment details saved', M.billingDetails.agreed]];
+  return `<div class="card stack"><b>Before you submit for approval</b>${s.status === 'rejected' ? '<div class="note bad">This salon was rejected. Fix the details and submit again.</div>' : ''}<div class="checks">${ok.map(([l, v]) => `<span class="tag" style="background:var(${v ? '--okbg' : '--badbg'})">${v ? '✓' : '✕'} ${l}</span>`).join('')}</div>${M.billingDetails.agreed ? '' : '<button class="btn alt block" data-a="sTab" data-v="billing">Go to Payment</button>'}<button class="btn block" data-a="submitSalon" ${ok.every(x => x[1]) ? '' : 'disabled'}>Submit for approval</button></div>`;
 }
 function salonView() {
   if (!V.my.length) return `<div class="stack"><h2>Set up your salon</h2>${salonForm(false)}</div>`;
-  const s = curSalon(), tabs = [['today', 'Today'], ['walkin', 'Walk-ins'], ['team', 'Team'], ['menu', 'Menu'], ['shop', 'Shop'], ['billing', 'Billing']];
+  const s = curSalon(), tabs = [['today', 'Today'], ['walkin', 'Walk-ins'], ['team', 'Team'], ['menu', 'Menu'], ['shop', 'Shop'], ['billing', 'Payment']];
   const notes = { pending: 'Waiting for Super Admin approval. Customers cannot see this salon yet. Add your team and menu meanwhile.', rejected: 'This salon was rejected. Update the details or contact support.', suspended: 'This salon is suspended by Super Admin.' };
   const body = { today: salonToday, walkin: salonWalkin, team: salonTeam, menu: salonMenu, shop: salonShop, billing: salonBilling }[V.stab]();
   return `<div class="stack"><div class="row gap" style="flex-wrap:nowrap"><select class="in" data-ch="sPick" aria-label="Choose salon">${V.my.map(x => `<option value="${x.id}" ${x.id === V.sid ? 'selected' : ''}>${esc(x.name)}${x.status !== 'approved' ? ' (' + x.status + ')' : ''}</option>`).join('')}</select><button class="btn alt sm" data-a="branchAdd">+ Branch</button></div>
-  ${s.status !== 'approved' ? `<div class="note ${s.status === 'pending' ? '' : 'bad'}">${notes[s.status]}</div>` : billBanner(s.billing)}
+  ${s.status === 'draft' || s.status === 'rejected' ? setupCard() : s.status !== 'approved' ? `<div class="note ${s.status === 'pending' ? '' : 'bad'}">${notes[s.status]}</div>` : billBanner(s.billing)}
   <div class="chips">${tabs.map(([k, l]) => `<button class="chip ${V.stab === k ? 'on' : ''}" data-a="sTab" data-v="${k}">${l}</button>`).join('')}</div>${body}</div>`;
 }
 const stName = id => { const x = V.manage.staff.find(y => y.id === id); return x ? x.name : ''; };
@@ -194,10 +198,10 @@ function salonTeam() {
   return `<button class="btn block" data-a="staffAdd">+ Add team member</button>${M.staff.length ? M.staff.map(x => `<div class="card stack"><div class="row">${avatar(x)}<div class="sp"><b>${esc(x.name)}</b><div class="muted small">${esc(x.spec)}</div></div></div><div class="small muted">${x.services.map(o => { const v = M.services.find(y => y.id === o.serviceId); return v ? esc(v.name) + ' ' + (o.durMin ?? v.durMin) + 'm' : ''; }).join(' · ')}</div>${x.leave.length ? `<div class="small">Leave: ${x.leave.map(dayLabel).join(', ')}</div>` : ''}<div class="row gap"><button class="btn alt sm" data-a="staffEdit" data-id="${x.id}">Edit</button><button class="btn bad sm" data-a="staffDel" data-id="${x.id}">Remove</button></div></div>`).join('') : empty('No team members yet. Add stylists with a photo and their speciality.')}`;
 }
 function salonMenu() {
-  const M = V.manage;
-  return `<div class="row gap"><button class="btn sm" data-a="svcAdd">+ Service</button><button class="btn alt sm" data-a="comboAdd">+ Combo</button></div><div class="muted small">Default time is used unless a stylist has their own time set in Team.</div>
-  <h3>Services</h3>${M.services.map(v => `<div class="card row"><div class="sp"><b>${esc(v.name)}</b><div class="muted small">${v.durMin} min · ${inr(v.price)}</div></div><button class="btn alt sm" data-a="svcEdit" data-id="${v.id}">Edit</button><button class="btn bad sm" data-a="svcDel" data-id="${v.id}">Remove</button></div>`).join('') || empty('No services yet.')}
-  <h3>Combos</h3>${M.combos.map(v => `<div class="card row"><div class="sp"><b>${esc(v.name)}</b><div class="muted small">${v.serviceIds.map(id => { const y = M.services.find(z => z.id === id); return y ? esc(y.name) : ''; }).join(' + ')}<br>${v.durMin} min · ${inr(v.price)}</div></div><button class="btn bad sm" data-a="comboDel" data-id="${v.id}">Remove</button></div>`).join('') || empty('No combos yet. Bundle services at a better price.')}`;
+  const M = V.manage, sum = c => c.serviceIds.reduce((a, id) => { const y = M.services.find(z => z.id === id); return a + (y ? y.price : 0); }, 0);
+  return `<div class="row gap"><button class="btn sm" data-a="svcAdd">+ Service</button><button class="btn alt sm" data-a="comboAdd">+ Combo offer</button></div><div class="muted small">Change a name, price or time and press Save. A stylist's own time (in Team) overrides the default time.</div>
+  <h3>Services</h3>${M.services.map(v => `<form class="card stack" data-submit="svcInline" data-id="${v.id}"><label>Name<input class="in" name="name" value="${esc(v.name)}" required></label><div class="cols2"><label>Price (₹)<input class="in" type="number" min="0" name="price" value="${v.price}" required></label><label>Time (minutes)<input class="in" type="number" min="5" step="5" name="durMin" value="${v.durMin}" required></label></div><div class="row gap"><button class="btn sm">Save</button><button type="button" class="btn bad sm" data-a="svcDel" data-id="${v.id}">Remove</button></div></form>`).join('') || empty('No services yet.')}
+  <h3>Combo offers</h3>${M.combos.map(v => { const save = sum(v) - v.price; return `<div class="card stack"><div class="row"><div class="sp"><b>${esc(v.name)}</b><div class="muted small">${v.serviceIds.map(id => { const y = M.services.find(z => z.id === id); return y ? esc(y.name) : ''; }).join(' + ')}<br>${v.durMin} min · ${inr(v.price)}${save > 0 ? ' · customers save ' + inr(save) : ''}</div></div>${pill(v.active ? 'active' : 'draft', v.active ? 'On' : 'Off')}</div><div class="row gap"><button class="btn alt sm" data-a="comboEdit" data-id="${v.id}">Edit</button><button class="btn alt sm" data-a="comboToggle" data-id="${v.id}">${v.active ? 'Switch off' : 'Switch on'}</button><button class="btn bad sm" data-a="comboDel" data-id="${v.id}">Remove</button></div></div>`; }).join('') || empty('No combo offers yet. Bundle services at a better price.')}`;
 }
 function salonShop() {
   const s = V.manage.salon;
@@ -209,9 +213,13 @@ function salonShop() {
   <div class="card stack"><b>Holidays</b><div class="row gap"><input class="in sp" type="date" id="hol" min="${TODAY}"><button class="btn alt sm" data-a="holAdd">Add</button></div><div class="chips" style="flex-wrap:wrap">${s.holidays.length ? s.holidays.map(d => `<button class="chip" data-a="holDel" data-v="${d}">${dayLabel(d)} ✕</button>`).join('') : '<span class="muted small">No holidays set.</span>'}</div></div>`;
 }
 function salonBilling() {
-  const b = V.bill;
-  return `<div class="card stack"><div class="row"><b class="sp">${BL[b.state]}</b><span class="tag">${inr(b.pricePerMonth)}/month</span></div><div class="muted small">${b.state === 'trial' ? 'Free until ' + fmtD(b.until) + ', then ' + inr(b.pricePerMonth) + '/month + ' + b.gstPct + '% GST.' : b.state === 'active' ? 'Paid until ' + fmtD(b.until) + '.' : 'Was due ' + fmtD(b.until) + '.'}</div>
-  <button class="btn block" data-a="pay">${b.state === 'trial' ? 'Subscribe early' : 'Pay ' + inr(b.pricePerMonth) + ' + GST'}</button>
+  const b = V.bill, d = V.manage.billingDetails;
+  return `<form class="card stack" data-submit="billSave"><b>Payment details</b><div class="note">${b.trialMonths} months free after approval. Then ${inr(b.pricePerMonth)} per month + ${b.gstPct}% GST.${d.agreed ? '' : ' Save these details to unlock Submit for approval.'}</div>
+  <label>Billing name<input class="in" name="name" value="${esc(d.name)}" required placeholder="Business or owner name"></label><label>Billing email<input class="in" type="email" name="email" value="${esc(d.email || A.user.email)}" required></label>
+  <label>GSTIN (optional)<input class="in" name="gstin" value="${esc(d.gstin)}" maxlength="15" placeholder="15 characters" style="text-transform:uppercase"></label>
+  <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" name="agree" ${d.agreed ? 'checked' : ''}> I agree to pay the subscription after the free period</label><button class="btn block">Save payment details</button></form>
+  <div class="card stack"><div class="row"><b class="sp">${BL[b.state]}</b><span class="tag">${inr(b.pricePerMonth)}/month</span></div><div class="muted small">${b.state === 'trial' ? 'Free until ' + fmtD(b.until) + '.' : b.state === 'active' ? 'Paid until ' + fmtD(b.until) + '.' : 'Was due ' + fmtD(b.until) + '.'}</div>
+  <button class="btn alt block" data-a="pay">${b.state === 'trial' ? 'Pay early' : 'Pay ' + inr(b.pricePerMonth) + ' + GST'}</button>
   ${b.invoices.length ? '<div class="small muted">Invoices</div>' + b.invoices.slice(0, 6).map(i => `<div class="row small"><span class="sp">${fmtD(i.issued)}</span><span>${inr(i.amount)} + ${inr(i.gst)} GST · ${i.status}</span></div>`).join('') : ''}</div>`;
 }
 
@@ -221,7 +229,7 @@ function adminView() {
   let body = '';
   if (V.atab === 'approve') {
     const L = V.asalons.filter(s => s.status === 'pending');
-    body = L.length ? L.map(s => { const ok = [['Location added', !!s.address], ['Timings set', s.closeMin > s.openMin], ['Menu has services', s.servicesCount > 0], ['At least 1 stylist added', s.staffAdded > 0]];
+    body = L.length ? L.map(s => { const ok = [['Location added', !!s.address], ['Timings set', s.closeMin > s.openMin], ['Menu has services', s.servicesCount > 0], ['At least 1 stylist added', s.staffAdded > 0], ['Payment details confirmed', s.billingReady]];
       return `<div class="card stack"><div><h3>${esc(s.name)}</h3><div class="muted small">${esc(s.area)} · ${esc(s.address || 'No address')} · ${s.type} · ${esc(s.ownerEmail)}</div></div><div class="small">Hours ${fmtT(s.openMin)}–${fmtT(s.closeMin)} · ${s.staffDeclared} staff declared · ${s.staffAdded} added</div><div class="checks">${ok.map(([l, v]) => `<span class="tag" style="background:var(${v ? '--okbg' : '--badbg'})">${v ? '✓' : '✕'} ${l}</span>`).join('')}</div><div class="row gap"><button class="btn sm" data-a="aAct" data-id="${s.id}" data-v="approve" ${ok.every(x => x[1]) ? '' : 'disabled'}>Approve</button><button class="btn bad sm" data-a="aAct" data-id="${s.id}" data-v="reject">Reject</button></div></div>`; }).join('') : empty('No salons waiting. New registrations show up here.');
   } else if (V.atab === 'salons') {
     body = V.asalons.filter(s => s.status !== 'pending').map(s => { const b = s.billing, off = s.status !== 'approved';
@@ -250,7 +258,8 @@ function modalBody(M) {
     }
     case 'svc': { const v = M.id ? V.manage.services.find(x => x.id === M.id) : { name: '', price: '', durMin: 45 };
       return `<h3>${M.id ? 'Edit' : 'Add'} service</h3><form class="stack" data-submit="svcSave"><label>Name<input class="in" name="name" value="${esc(v.name)}" required></label><div class="cols2"><label>Price (₹)<input class="in" type="number" min="0" name="price" value="${v.price}" required></label><label>Default time (min)<input class="in" type="number" min="5" step="5" name="durMin" value="${v.durMin}" required></label></div><button class="btn block">Save</button><button type="button" class="btn alt block" data-a="closeModal">Cancel</button></form>`; }
-    case 'combo': return `<h3>Add combo</h3><form class="stack" data-submit="comboSave"><label>Name<input class="in" name="name" required></label><div><label>Includes (pick at least 2)</label><div class="checks">${V.manage.services.map(x => `<label><input type="checkbox" name="cs" value="${x.id}"> ${esc(x.name)}</label>`).join('')}</div></div><div class="cols2"><label>Combo price (₹)<input class="in" type="number" min="0" name="price" required></label><label>Total time (min)<input class="in" type="number" min="5" step="5" name="durMin" placeholder="Auto: sum"></label></div><button class="btn block">Save</button><button type="button" class="btn alt block" data-a="closeModal">Cancel</button></form>`;
+    case 'combo': { const v = M.id ? V.manage.combos.find(x => x.id === M.id) : { name: '', serviceIds: [], price: '', durMin: '', active: true };
+      return `<h3>${M.id ? 'Edit' : 'Add'} combo offer</h3><form class="stack" data-submit="comboSave"><label>Name<input class="in" name="name" value="${esc(v.name)}" required></label><div><label>Includes (pick at least 2)</label><div class="checks">${V.manage.services.map(x => `<label><input type="checkbox" name="cs" value="${x.id}" ${v.serviceIds.includes(x.id) ? 'checked' : ''}> ${esc(x.name)}</label>`).join('')}</div></div><div class="cols2"><label>Offer price (₹)<input class="in" type="number" min="0" name="price" value="${v.price}" required></label><label>Total time (min)<input class="in" type="number" min="5" step="5" name="durMin" value="${v.durMin}" placeholder="Auto: sum"></label></div><label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" name="active" ${v.active ? 'checked' : ''}> Offer is on (customers can book it)</label><button class="btn block">Save</button><button type="button" class="btn alt block" data-a="closeModal">Cancel</button></form>`; }
   }
   return '';
 }
@@ -335,7 +344,7 @@ async function act(name, d, el, fd) {
       case 'bkSet': await api('PATCH', `/bookings/${d.id}/status`, { status: d.s }); await refresh(); return;
       case 'regSave': {
         const r = await api('POST', '/salons', { name: fd.get('name'), area: fd.get('area'), address: fd.get('address'), type: fd.get('type'), openMin: Number(fd.get('openMin')), closeMin: Number(fd.get('closeMin')), staffCount: Number(fd.get('staffCount')), branchOf: V.modal ? V.sid : undefined });
-        if (A.user.role === 'customer') A.user.role = 'owner'; V.sid = r.salon.id; V.stab = 'team'; V.modal = null; V.tab = 'salon'; toast('Submitted for approval', 'Add your team and menu while Super Admin reviews.'); await refresh(true); return; }
+        if (A.user.role === 'customer') A.user.role = 'owner'; V.sid = r.salon.id; V.stab = 'team'; V.modal = null; V.tab = 'salon'; toast('Salon created', 'Add your team, prices and payment details, then submit for approval.'); await refresh(true); return; }
       case 'branchAdd': V.modal = { type: 'branch' }; renderModal(); return;
       case 'walkinAdd': {
         const items = fd.getAll('it').map(p => { const [t, id] = p.split(':'); return { t, id }; });
@@ -357,7 +366,14 @@ async function act(name, d, el, fd) {
       case 'svcSave': { const b = { name: fd.get('name'), price: Number(fd.get('price')), durMin: Number(fd.get('durMin')) }; if (V.modal.id) await api('PUT', '/services/' + V.modal.id, b); else await api('POST', `/salons/${V.sid}/services`, b); V.modal = null; renderModal(); await refresh(); return; }
       case 'svcDel': if (!confirm('Remove this service? Combos that include it are removed too.')) return; await api('DELETE', '/services/' + d.id); await refresh(); return;
       case 'comboAdd': V.modal = { type: 'combo' }; renderModal(); return;
-      case 'comboSave': { const b = { name: fd.get('name'), price: Number(fd.get('price')), serviceIds: fd.getAll('cs') }; if (fd.get('durMin')) b.durMin = Number(fd.get('durMin')); await api('POST', `/salons/${V.sid}/combos`, b); V.modal = null; renderModal(); await refresh(); return; }
+      case 'comboSave': { const b = { name: fd.get('name'), price: Number(fd.get('price')), serviceIds: fd.getAll('cs') }; if (fd.get('durMin')) b.durMin = Number(fd.get('durMin'));
+        if (V.modal.id) { b.active = !!fd.get('active'); await api('PUT', '/combos/' + V.modal.id, b); } else await api('POST', `/salons/${V.sid}/combos`, b);
+        V.modal = null; renderModal(); toast('Combo saved'); await refresh(); return; }
+      case 'comboEdit': V.modal = { type: 'combo', id: d.id }; renderModal(); return;
+      case 'comboToggle': { const c = V.manage.combos.find(x => x.id === d.id); await api('PUT', '/combos/' + d.id, { active: !c.active }); await refresh(); return; }
+      case 'svcInline': await api('PUT', '/services/' + d.id, { name: fd.get('name'), price: Number(fd.get('price')), durMin: Number(fd.get('durMin')) }); toast('Saved'); await refresh(); return;
+      case 'billSave': await api('PUT', `/salons/${V.sid}/billing-details`, { name: fd.get('name'), email: fd.get('email'), gstin: fd.get('gstin'), agree: !!fd.get('agree') }); toast('Payment details saved'); await refresh(); return;
+      case 'submitSalon': await api('POST', `/salons/${V.sid}/submit`); toast('Submitted', 'Super Admin will review your salon.'); await refresh(true); return;
       case 'comboDel': await api('DELETE', '/combos/' + d.id); await refresh(); return;
       case 'shopSave': { const oc = String(fd.get('ocode')).trim(), op = Number(fd.get('opct'));
         await api('PATCH', '/salons/' + V.sid, { name: fd.get('name'), area: fd.get('area'), address: fd.get('address'), type: fd.get('type'), openMin: Number(fd.get('openMin')), closeMin: Number(fd.get('closeMin')), offDays: fd.getAll('off').map(Number), offer: oc && op > 0 ? { code: oc, pct: op } : null });

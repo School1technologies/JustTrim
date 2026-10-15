@@ -55,12 +55,12 @@ async function ownSalon(req, id, c = pool) {
   if (req.user.role !== 'admin' && s.owner_id !== req.user.id) bad('This is not your salon', 403);
   return s;
 }
-async function loadData(id, c = pool) {
+async function loadData(id, c = pool, all = false) {
   const { rows: [salon] } = await c.query('SELECT * FROM salons WHERE id=$1', [id]);
   if (!salon) return null;
   const services = (await c.query('SELECT * FROM services WHERE salon_id=$1 AND active ORDER BY name', [id])).rows;
   const combos = (await c.query(`SELECT c.*, COALESCE(array_agg(ci.service_id) FILTER (WHERE ci.service_id IS NOT NULL), '{}'::uuid[]) AS svc_ids
-    FROM combos c LEFT JOIN combo_items ci ON ci.combo_id=c.id WHERE c.salon_id=$1 GROUP BY c.id ORDER BY c.name`, [id])).rows;
+    FROM combos c LEFT JOIN combo_items ci ON ci.combo_id=c.id WHERE c.salon_id=$1 ${all ? '' : 'AND c.active'} GROUP BY c.id ORDER BY c.name`, [id])).rows;
   const staff = (await c.query('SELECT * FROM staff WHERE salon_id=$1 AND active ORDER BY name', [id])).rows;
   const ss = (await c.query('SELECT ss.* FROM staff_services ss JOIN staff s ON s.id=ss.staff_id WHERE s.salon_id=$1', [id])).rows;
   staff.forEach(s => { s.svc = {}; ss.filter(x => x.staff_id === s.id).forEach(x => { s.svc[x.service_id] = x.dur_min; }); });
@@ -362,7 +362,7 @@ app.post('/api/salons', need('customer', 'owner', 'admin'), h(async (req, res) =
     let brand = name;
     if (UUID.test(String(b.branchOf || ''))) { const parent = await ownSalon(req, b.branchOf, c); brand = parent.brand; }
     if (req.user.role === 'customer') await c.query(`UPDATE users SET role='owner' WHERE id=$1`, [req.user.id]);
-    const { rows: [s] } = await c.query(`INSERT INTO salons (owner_id, brand, name, area, address, type, open_min, close_min, declared_staff) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+    const { rows: [s] } = await c.query(`INSERT INTO salons (owner_id, brand, name, area, address, type, open_min, close_min, declared_staff, status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'draft') RETURNING *`,
       [req.user.id, brand, name, str(b.area, 'Area', 60), str(b.address, 'Address', 200), type, open, close, Math.max(0, Math.min(50, parseInt(b.staffCount) || 0))]);
     for (const [n, p, d] of type === 'Women' ? WOMEN : type === 'Men' ? MEN : UNI) await c.query('INSERT INTO services (salon_id, name, price, dur_min) VALUES ($1,$2,$3,$4)', [s.id, n, p, d]);
     return s;
@@ -376,10 +376,10 @@ app.get('/api/my/salons', need('owner', 'admin'), h(async (req, res) => {
 }));
 app.get('/api/salons/:id/manage', need('owner', 'admin'), h(async (req, res) => {   // full menu and team, even before approval
   await ownSalon(req, req.params.id);
-  const d = await loadData(req.params.id), cfg = await settings();
-  res.json({ salon: publicSalon(d.salon, { status: d.salon.status, billing: U.billState(d.salon, cfg) }),
+  const d = await loadData(req.params.id, pool, true), cfg = await settings(), sl = d.salon;
+  res.json({ salon: publicSalon(sl, { status: sl.status, billing: U.billState(sl, cfg) }), billingDetails: { name: sl.billing_name || '', email: sl.billing_email || '', gstin: sl.gstin || '', agreed: !!sl.billing_agreed_at },
     services: d.services.map(x => ({ id: x.id, name: x.name, price: x.price, durMin: x.dur_min })),
-    combos: d.combos.map(x => ({ id: x.id, name: x.name, price: x.price, durMin: x.dur_min, serviceIds: x.svc_ids })),
+    combos: d.combos.map(x => ({ id: x.id, name: x.name, price: x.price, durMin: x.dur_min, serviceIds: x.svc_ids, active: x.active })),
     staff: d.staff.map(x => ({ id: x.id, name: x.name, spec: x.spec, photo: x.photo, leave: x.leave, services: Object.entries(x.svc).map(([id, m]) => ({ serviceId: id, durMin: m })) })) });
 }));
 app.patch('/api/salons/:id', need('owner', 'admin'), h(async (req, res) => {
@@ -513,11 +513,53 @@ app.delete('/api/combos/:id', need('owner', 'admin'), h(async (req, res) => {
   await ownSalon(req, x.salon_id); await q('DELETE FROM combos WHERE id=$1', [x.id]); res.json({ ok: true });
 }));
 
+app.put('/api/combos/:id', need('owner', 'admin'), h(async (req, res) => {
+  if (!UUID.test(req.params.id)) bad('Not found', 404);
+  await tx(async c => {
+    const { rows: [x] } = await c.query('SELECT * FROM combos WHERE id=$1', [req.params.id]); if (!x) bad('Not found', 404);
+    await ownSalon(req, x.salon_id, c); const b = req.body || {}; let dur = x.dur_min;
+    if (Array.isArray(b.serviceIds)) {
+      const ids = [...new Set(b.serviceIds.filter(i => UUID.test(String(i))))];
+      if (ids.length < 2) bad('A combo needs at least 2 services');
+      const { rows } = await c.query('SELECT id, dur_min FROM services WHERE salon_id=$1 AND active AND id=ANY($2)', [x.salon_id, ids]);
+      if (rows.length !== ids.length) bad('A selected service does not belong to this salon');
+      dur = b.durMin ? intIn(b.durMin, 5, 600, 'Time') : rows.reduce((a, r) => a + r.dur_min, 0);
+      await c.query('DELETE FROM combo_items WHERE combo_id=$1', [x.id]);
+      for (const sid of ids) await c.query('INSERT INTO combo_items VALUES ($1,$2)', [x.id, sid]);
+    } else if (b.durMin) dur = intIn(b.durMin, 5, 600, 'Time');
+    await c.query('UPDATE combos SET name=$1, price=$2, dur_min=$3, active=$4 WHERE id=$5',
+      [str(b.name ?? x.name, 'Name', 60), intIn(b.price ?? x.price, 0, 100000, 'Price'), dur, b.active === undefined ? x.active : !!b.active, x.id]);
+  });
+  res.json({ ok: true });
+}));
+
+/* payment details step: required before a salon can be submitted for approval */
+app.put('/api/salons/:id/billing-details', need('owner', 'admin'), h(async (req, res) => {
+  const s = await ownSalon(req, req.params.id), b = req.body || {};
+  const name = str(b.name, 'Billing name', 120), email = String(b.email || '').trim().toLowerCase();
+  if (!emailOk(email)) bad('Enter a valid billing email');
+  const gstin = String(b.gstin || '').trim().toUpperCase();
+  if (gstin && !/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gstin)) bad('The GSTIN looks wrong. It has 15 characters.');
+  if (b.agree !== true) bad('Please accept the subscription terms');
+  await q('UPDATE salons SET billing_name=$1, billing_email=$2, gstin=$3, billing_agreed_at=COALESCE(billing_agreed_at, now()) WHERE id=$4', [name, email, gstin || null, s.id]);
+  res.json({ ok: true });
+}));
+app.post('/api/salons/:id/submit', need('owner', 'admin'), h(async (req, res) => {
+  const s = await ownSalon(req, req.params.id);
+  if (!['draft', 'rejected'].includes(s.status)) bad('This salon was already submitted', 409);
+  const { rows: [n] } = await q('SELECT (SELECT count(*) FROM staff WHERE salon_id=$1 AND active)::int st, (SELECT count(*) FROM services WHERE salon_id=$1 AND active)::int sv', [s.id]);
+  const missing = [];
+  if (!s.address) missing.push('address'); if (!n.st) missing.push('at least 1 stylist'); if (!n.sv) missing.push('at least 1 service'); if (!s.billing_agreed_at) missing.push('payment details');
+  if (missing.length) bad('Please add: ' + missing.join(', '), 409);
+  await q(`UPDATE salons SET status='pending' WHERE id=$1`, [s.id]);
+  res.json({ ok: true });
+}));
+
 /* subscription billing for the salon */
 app.get('/api/salons/:id/billing', need('owner', 'admin'), h(async (req, res) => {
   const s = await ownSalon(req, req.params.id), cfg = await settings();
   const { rows } = await q('SELECT id, amount, gst, issued, period_end, status FROM invoices WHERE salon_id=$1 ORDER BY issued DESC, id DESC LIMIT 24', [s.id]);
-  res.json({ ...U.billState(s, cfg), pricePerMonth: cfg.saas_price, gstPct: cfg.gst_pct, invoices: rows });
+  res.json({ ...U.billState(s, cfg), pricePerMonth: cfg.saas_price, gstPct: cfg.gst_pct, trialMonths: cfg.trial_months, invoices: rows });
 }));
 app.post('/api/salons/:id/billing/checkout', need('owner', 'admin'), h(async (req, res) => {
   const s = await ownSalon(req, req.params.id), cfg = await settings();
@@ -547,7 +589,7 @@ app.get('/api/admin/salons', admin, h(async (req, res) => {
   const cfg = await settings(), st = String(req.query.status || '');
   const { rows } = await q(`SELECT s.*, (SELECT count(*)::int FROM staff WHERE salon_id=s.id AND active) staff_n, (SELECT count(*)::int FROM services WHERE salon_id=s.id AND active) services_n, u.email owner_email
     FROM salons s JOIN users u ON u.id=s.owner_id WHERE ($1='' OR s.status=$1) ORDER BY s.created_at DESC`, [st]);
-  res.json({ salons: rows.map(s => publicSalon(s, { status: s.status, ownerEmail: s.owner_email, staffAdded: s.staff_n, staffDeclared: s.declared_staff, servicesCount: s.services_n, joined: s.joined, billing: U.billState(s, cfg) })) });
+  res.json({ salons: rows.map(s => publicSalon(s, { status: s.status, ownerEmail: s.owner_email, staffAdded: s.staff_n, staffDeclared: s.declared_staff, servicesCount: s.services_n, billingReady: !!s.billing_agreed_at, joined: s.joined, billing: U.billState(s, cfg) })) });
 }));
 app.post('/api/admin/salons/:id/:action', admin, h(async (req, res) => {
   const id = req.params.id, a = req.params.action;
@@ -555,8 +597,10 @@ app.post('/api/admin/salons/:id/:action', admin, h(async (req, res) => {
   const { rows: [s] } = await q('SELECT * FROM salons WHERE id=$1', [id]); if (!s) bad('Not found', 404);
   if (a === 'approve') {
     const { rows: [n] } = await q('SELECT (SELECT count(*) FROM staff WHERE salon_id=$1 AND active)::int st, (SELECT count(*) FROM services WHERE salon_id=$1 AND active)::int sv', [id]);
+    if (s.status !== 'pending') bad('The owner has not submitted this salon for approval yet', 409);
+    if (!s.billing_agreed_at) bad('The owner has not confirmed payment details yet', 409);
     if (!s.address || !n.st || !n.sv) bad('The salon needs an address, at least 1 stylist and at least 1 service before approval', 409);
-    await q(`UPDATE salons SET status='approved' WHERE id=$1`, [id]);
+    await q(`UPDATE salons SET status='approved', joined=CURRENT_DATE WHERE id=$1`, [id]);   // the free trial starts on approval
   } else if (a === 'reject') await q(`UPDATE salons SET status='rejected' WHERE id=$1`, [id]);
   else if (a === 'suspend') await q(`UPDATE salons SET status='suspended' WHERE id=$1`, [id]);
   else if (a === 'activate') await q(`UPDATE salons SET status='approved' WHERE id=$1`, [id]);

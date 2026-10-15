@@ -37,6 +37,13 @@ CREATE TABLE IF NOT EXISTS salons (
   created_at timestamptz NOT NULL DEFAULT now(),
   CHECK (close_min > open_min)
 );
+-- Added after the first release (safe to run again)
+ALTER TABLE salons ADD COLUMN IF NOT EXISTS billing_name text;
+ALTER TABLE salons ADD COLUMN IF NOT EXISTS billing_email text;
+ALTER TABLE salons ADD COLUMN IF NOT EXISTS gstin text;
+ALTER TABLE salons ADD COLUMN IF NOT EXISTS billing_agreed_at timestamptz;
+ALTER TABLE salons DROP CONSTRAINT IF EXISTS salons_status_check;
+ALTER TABLE salons ADD CONSTRAINT salons_status_check CHECK (status IN ('draft','pending','approved','rejected','suspended'));
 CREATE INDEX IF NOT EXISTS salons_status_area ON salons (status, area);
 
 CREATE TABLE IF NOT EXISTS staff (
@@ -74,6 +81,7 @@ CREATE TABLE IF NOT EXISTS combos (
   price int NOT NULL CHECK (price >= 0),
   dur_min int NOT NULL CHECK (dur_min > 0)
 );
+ALTER TABLE combos ADD COLUMN IF NOT EXISTS active boolean NOT NULL DEFAULT true;
 CREATE TABLE IF NOT EXISTS combo_items (
   combo_id uuid NOT NULL REFERENCES combos(id) ON DELETE CASCADE,
   service_id uuid NOT NULL REFERENCES services(id) ON DELETE CASCADE,

@@ -1,5 +1,7 @@
 # Just Trim: web app + backend (one service)
 
+(Plain text file. Open it with Notepad, not Acrobat.)
+
 Node.js (Express) + PostgreSQL. The server also serves the mobile-friendly web app from `public/`,
 so you deploy **one service and one database** and the app is live at a single address.
 
@@ -32,7 +34,7 @@ npm install
 createdb justtrim
 export DATABASE_URL=postgres://localhost/justtrim JWT_SECRET=$(openssl rand -hex 32) ADMIN_EMAILS=you@example.com
 npm run migrate && npm start         # open http://localhost:3000
-DATABASE_URL=postgres://... npm test # 45 checks. WARNING: wipes that database, use a throwaway one.
+DATABASE_URL=postgres://... npm test # 52 checks. WARNING: wipes that database, use a throwaway one.
 ```
 
 ## Good to know
@@ -49,3 +51,15 @@ DATABASE_URL=postgres://... npm test # 45 checks. WARNING: wipes that database, 
 Owner: `POST /api/salons`, `GET /api/my/salons`, `GET /api/salons/:id/manage`, `PATCH /api/salons/:id`, staff, services, combos,
 `GET /api/salons/:id/{bookings,notifications,events,billing}`, `POST /api/salons/:id/billing/checkout` ·
 Admin: `GET /api/admin/{overview,salons,settings,tickets}`, `POST /api/admin/salons/:id/{approve,reject,suspend,activate,mark-paid,extend-trial}`, `POST /api/admin/users/reset-password`.
+
+## How to change things later
+| I want to change | Where |
+|---|---|
+| Colours | `public/style.css`, the block at the very end called "Just Trim brand". Each colour is a code like `#E10650`. |
+| Logo and icons | Replace `public/logo.png` (sign-in page), `public/pin.png` (top bar), `public/favicon.png`, `public/icon-192.png`, `public/icon-512.png`, `public/apple-touch-icon.png`. Keep the same file names. |
+| Subscription price, free months, GST | Super Admin screen → Billing tab. No code needed. |
+| Screens and features | Ask for the change, get updated files, then follow the steps below. |
+
+**Updating the live app:** on GitHub open the file → pencil icon (edit) → paste → **Commit changes**. For many files use
+**Add file → Upload files** and drop them in. Render notices the change and redeploys by itself in 2 to 4 minutes.
+Check **Events** in Render to see it finish.
