@@ -594,7 +594,7 @@ app.post('/api/admin/tickets/:id/resolve', admin, h(async (req, res) => {
 }));
 
 /* ---------- web app (static files) ---------- */
-const PUBLIC_DIR = fileURLToPath(new URL('./public/', import.meta.url));
+const PUBLIC_DIR = fileURLToPath(new URL('./', import.meta.url));
 app.use(express.static(PUBLIC_DIR, { maxAge: '1h', index: 'index.html' }));
 app.get(/^\/(?!api\/).*/, (req, res) => res.sendFile(PUBLIC_DIR + 'index.html'));
 
