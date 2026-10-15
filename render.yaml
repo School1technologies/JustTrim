@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: just-trim-api
+    runtime: docker
+    healthCheckPath: /healthz
+    envVars:
+      - { key: NODE_ENV, value: production }
+      - { key: PGSSL, value: "1" }
+      - { key: JWT_SECRET, generateValue: true }
+      - { key: DATABASE_URL, fromDatabase: { name: just-trim-db, property: connectionString } }
+      - { key: ADMIN_EMAILS, sync: false }
+      - { key: CORS_ORIGIN, sync: false }
+      - { key: RAZORPAY_KEY_ID, sync: false }
+      - { key: RAZORPAY_KEY_SECRET, sync: false }
+      - { key: RAZORPAY_WEBHOOK_SECRET, sync: false }
+databases:
+  - name: just-trim-db
+    plan: basic-256mb
